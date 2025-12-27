@@ -20,9 +20,54 @@
         <div class="user-info"><span class="badge">{{ user?.specialty || 'Généraliste' }}</span></div>
       </header>
       
-      <div class="empty-state">
-        <p>Aucun patient enregistré pour le moment.</p>
-        <button class="action-btn">+ Ajouter un patient</button>
+      <!-- Add Patient Form -->
+      <div class="add-patient-form">
+        <h3>Ajouter un nouveau patient</h3>
+        <form @submit.prevent="linkPatient">
+          <p>Entrez le code unique à 8 caractères (ex: N3QR-XLJ3) fourni par votre patient.</p>
+          <div class="input-row">
+            <input v-model.trim="patientCode" type="text" placeholder="N3QR-XLJ3" required />
+            <button type="submit" class="action-btn" :disabled="loading">
+              {{ loading ? 'Ajout...' : 'Lier le patient' }}
+            </button>
+          </div>
+        </form>
+        <p v-if="message" :class="['message', messageType]">{{ message }}</p>
+      </div>
+
+      <!-- Patient List -->
+      <div class="patient-list-section">
+        <h3>Liste de vos patients</h3>
+        <div v-if="pending" class="loading-state">Chargement de la liste...</div>
+        <div v-else-if="error" class="error-state">Erreur de chargement des patients.</div>
+        <div v-else-if="patients && patients.length > 0" class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Inscrit le</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="patient in patients" :key="patient.id">
+                <td class="patient-info">
+                  <img 
+                    :src="patient.photo_url || `https://ui-avatars.com/api/?name=${patient.name}&background=random`" 
+                    @error="handleImageError($event, patient.name)"
+                    :title="patient.photo_url || 'Pas de photo définie'"
+                    alt="" class="avatar" 
+                  />
+                  <span>{{ patient.name }}</span>
+                </td>
+                <td>{{ patient.email }}</td>
+                <td>{{ patient.phone }}</td>
+                <td>{{ new Date(patient.created_at).toLocaleDateString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>
@@ -31,6 +76,50 @@
 <script setup>
 const user = useCookie('user')
 if (!user.value) navigateTo('/login')
+
+const patientCode = ref('')
+const loading = ref(false)
+const message = ref('')
+const messageType = ref('info')
+
+// Récupère la liste des patients liés à ce médecin
+const { data: patients, pending, error, refresh } = await useFetch('/api/patients')
+
+const linkPatient = async () => {
+  loading.value = true
+  message.value = ''
+  
+  const codeRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/i;
+  if (!codeRegex.test(patientCode.value)) {
+    messageType.value = 'error'
+    message.value = 'Format du code invalide. Le format doit être XXXX-XXXX.'
+    loading.value = false
+    return
+  }
+
+  try {
+    const res = await $fetch('/api/patients/link', {
+      method: 'POST',
+      body: { patientCode: patientCode.value.toUpperCase() }
+    })
+    messageType.value = 'success'
+    message.value = `${res.message} (Patient : ${res.patient.name})`
+    patientCode.value = '' // Vide le champ
+    await refresh() // Rafraîchit la liste des patients
+  } catch (err) {
+    messageType.value = 'error'
+    message.value = err.data?.statusMessage || 'Une erreur est survenue.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleImageError = (e, name) => {
+  e.target.onerror = null
+  e.target.src = `https://ui-avatars.com/api/?name=${name}&background=random`
+  console.warn(`Impossible de charger l'image pour ${name}`)
+}
+
 const logout = () => { user.value = null; navigateTo('/login') }
 </script>
 
@@ -50,6 +139,32 @@ const logout = () => { user.value = null; navigateTo('/login') }
 .main-content { flex: 1; padding: 2rem; overflow-y: auto; }
 .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .badge { background: #00DC82; color: #020420; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-.empty-state { text-align: center; margin-top: 4rem; color: #888; }
-.action-btn { background: #00DC82; color: #020420; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+
+/* Form Styles */
+.add-patient-form { background: rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid rgba(255, 255, 255, 0.1); }
+.add-patient-form h3 { margin-top: 0; margin-bottom: 0.5rem; }
+.add-patient-form p { color: #aaa; font-size: 0.9rem; margin-bottom: 1rem; }
+.input-row { display: flex; gap: 1rem; }
+.input-row input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; outline: none; font-family: 'Courier New', Courier, monospace; text-transform: uppercase; }
+.input-row input:focus { border-color: #00DC82; }
+.action-btn { background: #00DC82; color: #020420; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+.action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Patient List Styles */
+.patient-list-section { margin-top: 2rem; }
+.table-container { background: rgba(255, 255, 255, 0.05); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+th { background: rgba(0, 0, 0, 0.2); color: #888; font-weight: 600; font-size: 0.9rem; }
+tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+.empty-state, .loading-state, .error-state { text-align: center; margin-top: 4rem; color: #888; padding: 2rem; background: rgba(255,255,255,0.05); border-radius: 12px; }
+.error-state { color: #ff6b6b; }
+
+.message { margin-top: 1rem; font-size: 0.9rem; padding: 10px; border-radius: 6px; }
+.message.error { background: rgba(255, 0, 0, 0.1); color: #ff6b6b; }
+.message.success { background: rgba(0, 220, 130, 0.1); color: #00DC82; }
+
+.patient-info { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); }
 </style>

@@ -16,13 +16,15 @@ export default defineNitroPlugin(async (nitroApp) => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // Création de la table patients
+    // Table 'patients' : Gérée par l'application mobile (Flutter).
+    // Nous ne la créons pas ici pour éviter les conflits de structure.
+
+    // Création de la table access_codes (Gérée par l'app mobile, utilisée pour la liaison)
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS patients (
+      CREATE TABLE IF NOT EXISTS access_codes (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE,
-        phone VARCHAR(50),
+        patient_id INT NOT NULL,
+        code VARCHAR(20) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
@@ -79,6 +81,17 @@ export default defineNitroPlugin(async (nitroApp) => {
       await pool.query('INSERT INTO laboratories (name, address, city, contact) VALUES ?', [labs]);
       console.log('Laboratoires par défaut insérés.');
     }
+
+    // Création de la table de liaison doctor_patient
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS doctor_patient (
+        doctor_id INT NOT NULL,
+        patient_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (doctor_id, patient_id),
+        FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
 
     // Création de la table appointments (Rendez-vous)
     await pool.query(`
