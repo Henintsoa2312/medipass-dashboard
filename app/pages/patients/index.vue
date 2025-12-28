@@ -48,10 +48,11 @@
                 <th>Email</th>
                 <th>Téléphone</th>
                 <th>Inscrit le</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="patient in patients" :key="patient.id">
+              <tr v-for="patient in patients" :key="patient.id" @click="navigateTo(`/patients/${patient.id}`)" class="clickable-row">
                 <td class="patient-info">
                   <img 
                     :src="patient.photo_url || `https://ui-avatars.com/api/?name=${patient.name}&background=random`" 
@@ -64,6 +65,9 @@
                 <td>{{ patient.email }}</td>
                 <td>{{ patient.phone }}</td>
                 <td>{{ new Date(patient.created_at).toLocaleDateString() }}</td>
+                <td>
+                  <button class="btn-manage">Gérer</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -167,4 +171,10 @@ tr:hover { background: rgba(255, 255, 255, 0.02); }
 
 .patient-info { display: flex; align-items: center; gap: 12px; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); }
+
+.clickable-row { cursor: pointer; transition: background 0.2s; }
+.clickable-row:hover { background: rgba(255, 255, 255, 0.08); }
+
+.btn-manage { padding: 6px 12px; background: rgba(0, 220, 130, 0.1); color: #00DC82; border: 1px solid #00DC82; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+.btn-manage:hover { background: #00DC82; color: #020420; }
 </style>

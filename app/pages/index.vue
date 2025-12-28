@@ -152,7 +152,7 @@ const logout = () => {
 .logo { font-size: 1.5rem; font-weight: bold; color: #00DC82; margin-bottom: 3rem; }
 .sidebar nav ul { list-style: none; padding: 0; }
 .sidebar nav li { margin-bottom: 10px; border-radius: 8px; transition: background 0.3s; }
-.sidebar nav li:hover, .sidebar nav li.active { background: rgba(0, 220, 130, 0.1); }
+.sidebar nav li:hover, .sidebar nav li.active { background: rgba(0, 220, 130, 0.1); color: #00DC82; }
 .nav-link { text-decoration: none; color: #aaa; display: block; padding: 10px 15px; width: 100%; height: 100%; }
 .sidebar nav li.active .nav-link { color: #00DC82; }
 .logout { margin-top: auto; }
